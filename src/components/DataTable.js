@@ -64,7 +64,9 @@ function DataTable({ apiEndpoint, columns, actions }) {
             paginatedData.map((row, index) => (
               <tr key={index}>
                 {columns.map(column => (
-                  <td key={column.key}>{row[column.key]}</td>
+                  <td key={column.key} data-label={column.label}>
+                    {row[column.key]}
+                  </td>
                 ))}
                 <td>
                   {actions.map((action, idx) => (
