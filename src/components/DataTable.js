@@ -1,90 +1,95 @@
 import React, { useState, useEffect } from 'react';
-import PropTypes from 'prop-types';
-import Pagination from './Pagination'; 
-import TableRowActions from './TableRowActions'; 
+import axios from 'axios';
+import Pagination from './Pagination';
+import useTableFilter from '../hooks/useTableFilter';
+import useTableSort from '../hooks/useTableSort';
 import styles from '../styles/DataTable.module.css';
+import PaginationStyles from '../styles/Pagination.module.css';
 
-const DataTable = ({ apiEndpoint, columns, actions }) => {
+function DataTable({ apiEndpoint, columns, actions }) {
   const [data, setData] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(5); // Customize items per page
+  const [rowsPerPage, setRowsPerPage] = useState(5);
 
-  // Fetch data from the API
+  const { filteredData, filter, setFilter } = useTableFilter(data);
+  const { sortedData, sortField, sortOrder, handleSort } = useTableSort(filteredData);
+
   useEffect(() => {
-    const fetchData = async () => {
+    async function fetchData() {
       try {
-        const response = await fetch(apiEndpoint);
-        const result = await response.json();
-        setData(result);
-        setLoading(false);
-      } catch (err) {
-        setError('Error fetching data');
-        setLoading(false);
+        const response = await axios.get(apiEndpoint);
+        setData(response.data);
+      } catch (error) {
+        console.error('Error fetching data:', error);
       }
-    };
+    }
+
     fetchData();
   }, [apiEndpoint]);
 
-  // Pagination logic
-  const indexOfLastItem = currentPage * itemsPerPage;
-  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentItems = data.slice(indexOfFirstItem, indexOfLastItem);
+  const startIndex = (currentPage - 1) * rowsPerPage;
+  const endIndex = startIndex + rowsPerPage;
+  const paginatedData = sortedData.slice(startIndex, endIndex);
 
-  const handlePageChange = (pageNumber) => setCurrentPage(pageNumber);
-
-  if (loading) return <p>Loading...</p>;
-  if (error) return <p>{error}</p>;
+  const pageCount = Math.ceil(filteredData.length / rowsPerPage);
 
   return (
-    <div className={styles.tableWrapper}>
-      <table className={styles.dataTable}>
+    <div className={styles.tableContainer}>
+      <input
+        type="text"
+        placeholder="Search..."
+        value={filter}
+        onChange={(e) => setFilter(e.target.value)}
+        className={styles.searchInput}
+      />
+      <table className={styles.table}>
         <thead>
           <tr>
-            {columns.map((col) => (
-              <th key={col.key}>{col.label}</th>
+            {columns.map(column => (
+              <th
+                key={column.key}
+                onClick={() => handleSort(column.key)}
+                className={styles.sortable}
+                style={{ cursor: 'pointer' }}
+              >
+                {column.label}
+                {sortField === column.key && (sortOrder === 'asc' ? ' 🔼' : ' 🔽')}
+              </th>
             ))}
             <th>Actions</th>
           </tr>
         </thead>
         <tbody>
-          {currentItems.map((row) => (
-            <tr key={row.id}>
-              {columns.map((col) => (
-                <td key={col.key}>{row[col.key]}</td>
-              ))}
-              <td>
-                <TableRowActions actions={actions} row={row} />
-              </td>
+          {paginatedData.length > 0 ? (
+            paginatedData.map((row, index) => (
+              <tr key={index}>
+                {columns.map(column => (
+                  <td key={column.key}>{row[column.key]}</td>
+                ))}
+                <td>
+                  {actions.map((action, idx) => (
+                    <button key={idx} onClick={() => action.callback(row)}>
+                      {action.label}
+                    </button>
+                  ))}
+                </td>
+              </tr>
+            ))
+          ) : (
+            <tr>
+              <td colSpan={columns.length + 1}>No data available</td>
             </tr>
-          ))}
+          )}
         </tbody>
       </table>
       <Pagination
-        itemsPerPage={itemsPerPage}
-        totalItems={data.length}
         currentPage={currentPage}
-        onPageChange={handlePageChange}
+        totalPages={pageCount}
+        onPageChange={setCurrentPage}
+        classes={PaginationStyles}
       />
     </div>
   );
-};
-
-DataTable.propTypes = {
-  apiEndpoint: PropTypes.string.isRequired,
-  columns: PropTypes.arrayOf(
-    PropTypes.shape({
-      key: PropTypes.string.isRequired,
-      label: PropTypes.string.isRequired,
-    })
-  ).isRequired,
-  actions: PropTypes.arrayOf(
-    PropTypes.shape({
-      label: PropTypes.string.isRequired,
-      callback: PropTypes.func.isRequired,
-    })
-  ).isRequired,
-};
+}
 
 export default DataTable;
