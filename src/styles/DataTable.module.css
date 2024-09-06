@@ -1,0 +1,21 @@
+.tableWrapper {
+    margin: 20px;
+  }
+  .dataTable {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  .dataTable th, .dataTable td {
+    border: 1px solid #ddd;
+    padding: 8px;
+  }
+  .dataTable th {
+    cursor: pointer;
+    background-color: #f2f2f2;
+  }
+  .searchInput {
+    margin-bottom: 10px;
+    padding: 8px;
+    width: 100%;
+  }
+  
